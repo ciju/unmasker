@@ -9,13 +9,6 @@ $ ->
 # resized, and calculates new masking squares, whenever new collisions
 # happen.
 
-translucentMask = (ctx, w, h) ->
-    ctx.beginPath()
-    ctx.rect 0, 0, w, h
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-    ctx.fill()
-    ctx
-
 class SquareGroups
     constructor: ->
         @squares = []
