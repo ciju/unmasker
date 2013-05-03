@@ -10,9 +10,12 @@ p {
 .mask {
    position: absolute;
    display: block;
-   border: 1px solid brown;
-   background-color: gray;
+   /* border: 1px solid brown; */
+   background-color: #dbdbdb;
    opacity: 0.5;
+   font-size: 20px;
+   text-align: center;
+   margin: 0 auto;
 }
 .sel-rect {
    position: absolute;

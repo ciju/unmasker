@@ -9,6 +9,7 @@ $ ->
 # resized, and calculates new masking squares, whenever new collisions
 # happen.
 
+# Group of 
 class SquareGroups
     constructor: ->
         @squares = []
@@ -20,15 +21,15 @@ class SquareGroups
         for i in @squares
             do (i) ->
                 if i.IsColliding(s) and i.Masking
-                    log 'is colliding', s.div[0], s
-                    r = i.SplitWith(s)
-                    log r
-                    log('j: ', j.div[0]) for j in r if j
-                    
+                    log 'is colliding', s?.id, s 
+                    log i.SplitWith s
+
     
 squares = new SquareGroups
 
-Dragging = false            
+Dragging = false
+
+Id = 0    
 
 class Square
     constructor: (@x, @y, @w, @h, @Masking=true) ->
@@ -39,10 +40,10 @@ class Square
         @.updateDiv()
         $('body').append @div
 
-        @
+        @id = Id
+        Id += 1
 
-    hookMouseMove: =>
-        @div.mousemove @.WhileDragging
+        @
 
     updateDiv: =>
         @div.css(
@@ -51,24 +52,27 @@ class Square
             width: @w + 'px'
             height: @h + 'px'
         )
+        @div.attr 'data-id', @id
     
 
     Changing: ->
         [false, false, true, true]
-            
 
+    # Check if the Rectangle is colliding with normalized boundry of `s`
     IsColliding: (s) ->
+        {x: x, y: y, w: w, h: h} = s.normalizedBoundary()
+    
         not (
-            @x + @w <= s.x  or
-            @x >= s.x + s.w or
-            @y + @h <= s.y  or
-            @y >= s.y + s.h
+            @x + @w <= x  or
+            @x >= x + w or
+            @y + @h <= y  or
+            @y >= y + h
         )
 
     intersectingRect: (s) =>
-        [x, y, w, h] = [s.x, s.y, s.w, s.h]
-        # get the inside square.
-        [rbx, rby] = [x+w, y+h]
+        {x: x, y: y, w: w, h: h} = s.normalizedBoundary()
+        rbx = x + w
+        rby = y + h
     
         x = if x < @x then @x else x
         y = if y < @y then @y else y
@@ -113,21 +117,34 @@ class Square
         }
 
     updateIntersections: (s) =>
+        if not @IsColliding(s)
+            log 'collistion not happening'
+            @RemoveSplits()
+            return
+
         [x, y, w, h] = @.intersectingRect s
 
-        if s.x != x or s.y != y or s.w != w or s.h != h
-            log ' ----- collision '
+
+        # this probably needs the correct coordinates.
+        # move the intersection logic to SelectionRect.
+        # dont expose bare coordinates
+        ns = s.normalizedBoundary()
+    
+        if ns.x != x or ns.y != y or ns.w != w or ns.h != h
+            log ' ----- out of boundery ', @id
             squares.ProcessColliding s
-            # for sqr in colliding if not sqr == @
-            #     log 'found colliding sqr which is not self'
-            #     s.rects.push(sqr) 
                 
-        # log ' dragging selection square ', x, y, w, h
 
         splits = @.rectSplits @.intersectionPoints x, y, w, h
 
+        newSquare = (xx, yy, ww, hh) ->
+            return null if hh == 0 or ww == 0
+            new Square xx, yy, ww, hh
+
         updateSquare = (d, v) =>
-            # log 'splits ', d, v
+            log "#{@splits[d]?.id}", v
+
+            @splits[d] = newSquare(v...) if not @splits[d]
             return if not @splits[d]
 
             @splits[d].x = v[0]
@@ -137,13 +154,21 @@ class Square
 
             @splits[d].updateDiv()
     
+        log "- spilitting #{@id} to #{ (v?.id for _, v of @splits).join(',') }"
+    
         updateSquare(d, v) for d, v of splits
     
 
     SplitWith: (s) ->
-        [x, y, w, h] = @.intersectingRect s
+        if not @.IsColliding s
+            log 'SplitWith: no collision'
+            @.RemoveSplits()
+            return
+        if not @Masking
+            log 'div ', @, ' not visible'
+            return
 
-        log ' the selection square', x, y, w, h
+        [x, y, w, h] = @.intersectingRect s
 
         newSquare = (xx, yy, ww, hh) ->
             return null if x == xx and y == yy and
@@ -151,12 +176,12 @@ class Square
             return null if hh == 0 or ww == 0
             new Square xx, yy, ww, hh
 
-        @div.css 'display', 'none'
-        log 'splitting', @, '  with ', s
+        @RemoveOrig()
+        log 'splitting', @id, @, '  with ', s
 
-        @Masking = false
+        splits =  @.rectSplits @.intersectionPoints x, y, w, h
 
-        splits =  @.rectSplits(@.intersectionPoints(x, y, w, h))
+        log 'SplitWith: ', s.div, x, y, w, h
 
         @splits[d] = newSquare(v...) for d, v of splits
         log(d, (v.div[0] if v)) for d, v of @splits
@@ -165,19 +190,18 @@ class Square
 
         @
 
-    Destroy: =>
-        @div.remove()
+    RemoveOrig: =>
+        @div.hide()
+        @Masking = false
 
-    WhileDragging: (e) =>
-        return if not Dragging
-
-        if not @dragSquare
-            @dragSquare = new SelectionRect e.pageX, e.pageY, 1, 1
-            log 'started dragging', @dragSquare
-            @.SplitWith @dragSquare
-    
-        @dragSquare.WhileDragging e
-        @.updateIntersections @dragSquare
+    RemoveSplits: =>
+        log 'removing splits'
+        @div.show()
+        @Masking = true
+        for d, v of @splits
+            v?.RemoveOrig()
+            v?.div.remove()
+            v?.Masking = false
 
     StopDragging: (e) =>
         log 'stopping, and pushing all squares', @splits
@@ -185,9 +209,8 @@ class Square
             if n and n.w != 0 and n.h != 0
                 squares.Push(n)
             else
-                n?.Destroy()
+                n?.RemoveSplits()
             
-        
 
 # square associated with a div.
 # change in square dimentions, changes the underlying div
@@ -198,32 +221,49 @@ class SelectionRect
         @div = $('<div class="sel-rect">')
         @rects = []
         $('body').append @div
+        @id = Id
+        Id += 1
         @
 
     updateDiv: =>
-        # log 'updating div', @x, @y, @w, @h
+        ns = @.normalizedBoundary()
         @div.css(
-            top: @y+'px'
-            left: @x + 'px'
-            width: @w + 'px'
-            height: @h + 'px'
+            top: ns.y+'px'
+            left: ns.x + 'px'
+            width: ns.w + 'px'
+            height: ns.h + 'px'
         )
 
     Changing: ->
         [false, false, true, true]
 
+    # If the width/height of `s` is negative, normalize it. `x` and
+    # `y` would be the coordinates of point closer to origin. And `w`
+    # and `h` would be +ve.
+    normalizedBoundary: =>
+        [x, y, w, h] = [@x, @y, @w, @h]
+        [rbx, rby] = [x+w, y+h]
+
+        if rbx < x
+            [x, rbx, w] = [rbx, x, -w]
+        if  rby < y
+            [y, rby, h] = [rby, y, -h]
+
+        {x: x, y: y, w: w, h: h}
+            
+
     WhileDragging: (e) =>
         @w = e.pageX - @x
         @h = e.pageY - @y
 
-        # log 'drag', @x, @y, @w, @h
-        r.updateIntersections(@) for r in @rects
-        # @square.updateIntersections @
         @.updateDiv()
+        r.updateIntersections(@) for r in @rects
 
     StopDragging: (e) =>
-        log 'selectionrect drag stop'
         r.StopDragging(e) for r in @rects
+
+        log 'selectionrect drag stop'
+        console.groupEnd()
 
 doStuff = ->
     [w, h] = [window.document.width, window.document.height]
@@ -245,8 +285,11 @@ doStuff = ->
     sel = null
 
     $d.mousedown (e) ->
-        log 'start dragging %O', squares.squares
         Dragging = true
+
+        console.group 'drag'
+        log 'start dragging %O', squares.squares
+        
         sel = new SelectionRect e.pageX, e.pageY, 1, 1
         squares.ProcessColliding sel
         $d.mousemove sel.WhileDragging
