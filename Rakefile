@@ -1,13 +1,12 @@
+desc "Setup gh-pages under docs directory"
+task :setup do
+  `rm -rf ./docs`
+  `mkdir ./docs`
+  `cd docs && git clone git@github.com:ciju/unmasker.git . && git checkout origin/gh-pages -b gh-pages && git branch -d master`
+end
+
 desc "Deploy docs to github"
 task :docco do
   `docco app.coffee`
-  `git add -A`
-  `git stash`
-  `git checkout gh-pages`
-  `rm -rdf docs`
-  `git add -A`
-  `git stash pop`
-  `git commit -am 'updating docs'`
-  `git push origin gh-pages`
-  `git checkout master`
+  `cd docs && git add -A && git commit -am 'updating docs' && git push -f origin gh-pages`
 end
