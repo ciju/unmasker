@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>app.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>app.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>have separate squares for drawing the mask and non-masking
+ones. non-masking knows the mask around it, which have to be
+resized, and calculates new masking squares, whenever new collisions
+happen.</p>
+<p>TODO: a way to regenerate the rectangle collections and masking
+status.</p>
+<p>TODO: API?</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="function"><span class="title">log</span></span> = (args...) -&gt;
+    console.log(args...) <span class="keyword">if</span> console?.log?</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Global variable which is set to true, if mouse is being dragged.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Dragging = <span class="literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Generates a global unique id, each time its called.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>GetId = <span class="keyword">do</span> -&gt;
+    id = <span class="number">0</span>
+    -&gt; id += <span class="number">1</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Global Collection of rectangles</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Rects = []</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Group of rectangles, which can be checked for collision.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="class"><span class="keyword">class</span> <span class="title">window</span>.<span class="title">RectGroups</span></span>
+    constructor: -&gt;
+        <span class="property">@rects</span> = []</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Whenever a new area appears on the screen, call Push to add it
+to collection.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    Push: (s) -&gt;
+        <span class="keyword">return</span> <span class="keyword">if</span> <span class="keyword">not</span> s
+        log <span class="string">'pushing '</span>, s.div[<span class="number">0</span>]
+        <span class="property">@rects</span>.push s</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Checks which of the rectangles in the collection collide with
+the rectangle <code>s</code> passed as parameter.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    ProcessColliding: (s) -&gt;
+        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="property">@rects</span>
+            <span class="keyword">do</span> (i) -&gt;
+                <span class="keyword">if</span> i.IsColliding(s) <span class="keyword">and</span> i.Masking
+                    log <span class="string">'is colliding'</span>, s?.id, s
+                    log i.SplitWith s
+
+
+<span class="class"><span class="keyword">class</span> <span class="title">window</span>.<span class="title">Rectangle</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Masking is true if the rectangle is actually masking the screen.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    constructor: (<span class="property">@x</span>, <span class="property">@y</span>, <span class="property">@w</span>, <span class="property">@h</span>, <span class="property">@Masking</span>=<span class="literal">true</span>) -&gt;
+        <span class="keyword">return</span> <span class="literal">null</span> <span class="keyword">if</span> <span class="property">@w</span> == <span class="number">0</span> <span class="keyword">or</span> <span class="property">@h</span> == <span class="number">0</span>
+
+        <span class="property">@id</span> = GetId()
+        <span class="property">@splits</span> = {}
+
+        <span class="property">@div</span> = $(<span class="string">'&lt;div class="mask"&gt;'</span>)
+        @.updateDiv()
+        $(<span class="string">'body'</span>).append <span class="property">@div</span>
+
+        @
+
+    updateDiv: =&gt;
+        <span class="property">@div</span>.css(
+            top: <span class="property">@y</span> + <span class="string">'px'</span>
+            left: <span class="property">@x</span> + <span class="string">'px'</span>
+            width: <span class="property">@w</span> + <span class="string">'px'</span>
+            height: <span class="property">@h</span> + <span class="string">'px'</span>
+        )
+        <span class="property">@div</span>.attr <span class="string">'data-id'</span>, <span class="property">@id</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Check if the Rectangle is colliding with normalized boundry of <code>s</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    IsColliding: (s) -&gt;
+        {x: x, y: y, w: w, h: h} = s.NormalizedBoundary()
+
+        <span class="keyword">not</span> (
+            <span class="property">@x</span> + <span class="property">@w</span> &lt;= x  <span class="keyword">or</span>
+            <span class="property">@x</span> &gt;= x + w <span class="keyword">or</span>
+            <span class="property">@y</span> + <span class="property">@h</span> &lt;= y  <span class="keyword">or</span>
+            <span class="property">@y</span> &gt;= y + h
+        )</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Return the details of rectangle which is the intersection of
+Selection rectangle and current rectangle object.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    intersectingRect: (s) =&gt;
+        {x: x, y: y, w: w, h: h} = s.NormalizedBoundary()
+        rbx = x + w
+        rby = y + h
+
+        x = <span class="keyword">if</span> x &lt; <span class="property">@x</span> <span class="keyword">then</span> <span class="property">@x</span> <span class="keyword">else</span> x
+        y = <span class="keyword">if</span> y &lt; <span class="property">@y</span> <span class="keyword">then</span> <span class="property">@y</span> <span class="keyword">else</span> y
+        w = <span class="keyword">if</span> rbx &gt; <span class="property">@x</span> + <span class="property">@w</span> <span class="keyword">then</span> <span class="property">@x</span> + <span class="property">@w</span> - x <span class="keyword">else</span> rbx - x
+        h = <span class="keyword">if</span> rby &gt; <span class="property">@y</span> + <span class="property">@h</span> <span class="keyword">then</span> <span class="property">@y</span> + <span class="property">@h</span> - y <span class="keyword">else</span> rby - y
+
+        [x, y, w, h]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Returns the lines (rows and columns) of rectangles, formed by
+intersection. The naming convension is -
+f =&gt; first, m =&gt; middle, l =&gt; last, c =&gt; column,
+r =&gt; row, s =&gt; start, w =&gt; width, h =&gt; height</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    intersectionPoints: (x, y, w, h) =&gt;
+        fcs: <span class="property">@x</span>
+        fcw: x - <span class="property">@x</span>
+        mcs: x
+        mcw: w
+        lcs: x + w
+        lcw: <span class="property">@x</span> + <span class="property">@w</span> - (x + w)
+
+        frs: <span class="property">@y</span>
+        frh: y - <span class="property">@y</span>
+        mrs: y
+        mrh: h
+        lrs: y + h
+        lrh: <span class="property">@y</span> + <span class="property">@h</span> - (y + h)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Returns the rectangles, around the intersection. Generates
+rectangles for all positions except the intersection
+itself. Note that the rectangles could be of 0 size, if the
+intersection overlaps with sides of the rectangle</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    rectSplits: (p) =&gt;
+        {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>first column</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            nw: [p.fcs, p.frs, p.fcw, p.frh]
+            w: [p.fcs, p.mrs, p.fcw, p.mrh]
+            sw: [p.fcs, p.lrs, p.fcw, p.lrh]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>second column</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            n: [p.mcs, p.frs, p.mcw, p.frh]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <pre><code>[p.mcs, p.mrs, p.mcw, p.mrh]</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            s: [p.mcs, p.lrs, p.mcw, p.lrh]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>third column</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            ne: [p.lcs, p.frs, p.lcw, p.frh]
+            e: [p.lcs, p.mrs, p.lcw, p.mrh]
+            se: [p.lcs, p.lrs, p.lcw, p.lrh]
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>called every time the size of selection rectangle changes.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    updateIntersections: (s) =&gt;
+        <span class="keyword">if</span> <span class="keyword">not</span> <span class="property">@IsColliding</span>(s)
+            <span class="property">@RemoveSplits</span>()
+            <span class="keyword">return</span>
+
+        [x, y, w, h] = @.intersectingRect s</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>this probably needs the correct coordinates.
+move the intersection logic to SelectionRect.
+dont expose bare coordinates</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        ns = s.NormalizedBoundary()
+
+        <span class="keyword">if</span> ns.x != x <span class="keyword">or</span> ns.y != y <span class="keyword">or</span> ns.w != w <span class="keyword">or</span> ns.h != h
+            Rects.ProcessColliding s
+
+        splits = @.rectSplits @.intersectionPoints x, y, w, h
+
+        <span class="function"><span class="title">newRect</span></span> = (xx, yy, ww, hh) -&gt;
+            <span class="keyword">return</span> <span class="literal">null</span> <span class="keyword">if</span> hh == <span class="number">0</span> <span class="keyword">or</span> ww == <span class="number">0</span>
+            <span class="keyword">new</span> Rectangle xx, yy, ww, hh
+
+        <span class="function"><span class="title">updateRect</span></span> = (d, v) =&gt;
+            <span class="property">@splits</span>[d] = newRect(v...) <span class="keyword">if</span> <span class="keyword">not</span> <span class="property">@splits</span>[d]
+            <span class="keyword">return</span> <span class="keyword">if</span> <span class="keyword">not</span> <span class="property">@splits</span>[d]
+
+            <span class="property">@splits</span>[d].x = v[<span class="number">0</span>]
+            <span class="property">@splits</span>[d].y = v[<span class="number">1</span>]
+            <span class="property">@splits</span>[d].w = v[<span class="number">2</span>]
+            <span class="property">@splits</span>[d].h = v[<span class="number">3</span>]
+
+            <span class="property">@splits</span>[d].updateDiv()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <pre><code>log &quot;- spilitting #{@id} to #{ (v?.id for _, v of @splits).join(&#39;,&#39;) }&quot;</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        updateRect(d, v) <span class="keyword">for</span> d, v <span class="keyword">of</span> splits
+
+
+    SplitWith: (s) -&gt;
+        <span class="keyword">if</span> <span class="keyword">not</span> @.IsColliding s
+            log <span class="string">'SplitWith: no collision'</span>
+            @.RemoveSplits()
+            <span class="keyword">return</span>
+        <span class="keyword">if</span> <span class="keyword">not</span> <span class="property">@Masking</span>
+            log <span class="string">'div '</span>, @, <span class="string">' not visible'</span>
+            <span class="keyword">return</span>
+
+        [x, y, w, h] = @.intersectingRect s
+
+        <span class="function"><span class="title">newRect</span></span> = (xx, yy, ww, hh) -&gt;
+            <span class="keyword">return</span> <span class="literal">null</span> <span class="keyword">if</span> x == xx <span class="keyword">and</span> y == yy <span class="keyword">and</span>
+                w == ww <span class="keyword">and</span> h == hh
+            <span class="keyword">return</span> <span class="literal">null</span> <span class="keyword">if</span> hh == <span class="number">0</span> <span class="keyword">or</span> ww == <span class="number">0</span>
+            <span class="keyword">new</span> Rectangle xx, yy, ww, hh
+
+        <span class="property">@RemoveOrig</span>()
+        log <span class="string">'splitting'</span>, <span class="property">@id</span>, @, <span class="string">'  with '</span>, s
+
+        splits =  @.rectSplits @.intersectionPoints x, y, w, h
+
+        log <span class="string">'SplitWith: '</span>, s.div, x, y, w, h
+
+        <span class="property">@splits</span>[d] = newRect(v...) <span class="keyword">for</span> d, v <span class="keyword">of</span> splits
+        log(d, (v.div[<span class="number">0</span>] <span class="keyword">if</span> v)) <span class="keyword">for</span> d, v <span class="keyword">of</span> <span class="property">@splits</span>
+
+        s.rects.push @
+
+        @
+
+    RemoveOrig: =&gt;
+        <span class="property">@div</span>.hide()
+        <span class="property">@Masking</span> = <span class="literal">false</span>
+
+    RemoveSplits: =&gt;
+        <span class="property">@div</span>.show()
+        <span class="property">@Masking</span> = <span class="literal">true</span>
+        <span class="keyword">for</span> d, v <span class="keyword">of</span> <span class="property">@splits</span>
+            v?.RemoveOrig()
+            v?.div.remove()
+            v?.Masking = <span class="literal">false</span>
+
+    StopDragging: =&gt;
+        log <span class="string">'stopping, and pushing all rects'</span>, <span class="property">@splits</span>
+        <span class="keyword">for</span> d, n <span class="keyword">of</span> <span class="property">@splits</span>
+            <span class="keyword">if</span> n <span class="keyword">and</span> n.w != <span class="number">0</span> <span class="keyword">and</span> n.h != <span class="number">0</span>
+                Rects.Push(n)
+            <span class="keyword">else</span>
+                n?.RemoveSplits()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>square associated with a div.
+change in square dimentions, changes the underlying div
+what happens on drag</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Selections = []
+
+<span class="class"><span class="keyword">class</span> <span class="title">window</span>.<span class="title">SelectionRect</span></span>
+    constructor: (<span class="property">@x</span>, <span class="property">@y</span>, <span class="property">@w</span>, <span class="property">@h</span>) -&gt;
+        <span class="property">@div</span> = $(<span class="string">'&lt;div class="sel-rect"&gt;'</span>)
+        <span class="property">@rects</span> = []
+        $(<span class="string">'body'</span>).append <span class="property">@div</span>
+        Selections.push @
+        <span class="property">@id</span> = GetId()
+        @.updateDiv()
+        @
+
+    updateDiv: =&gt;
+        ns = @.NormalizedBoundary()
+        <span class="property">@div</span>.css(
+            top: ns.y+<span class="string">'px'</span>
+            left: ns.x + <span class="string">'px'</span>
+            width: ns.w + <span class="string">'px'</span>
+            height: ns.h + <span class="string">'px'</span>
+        )</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>If the width/height of <code>s</code> is negative, normalize it. <code>x</code> and
+<code>y</code> would be the coordinates of point closer to origin. And <code>w</code>
+and <code>h</code> would be +ve.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    NormalizedBoundary: =&gt;
+        [x, y, w, h] = [<span class="property">@x</span>, <span class="property">@y</span>, <span class="property">@w</span>, <span class="property">@h</span>]
+        [rbx, rby] = [x+w, y+h]
+
+        <span class="keyword">if</span> rbx &lt; x
+            [x, rbx, w] = [rbx, x, -w]
+        <span class="keyword">if</span>  rby &lt; y
+            [y, rby, h] = [rby, y, -h]
+
+        {x: x, y: y, w: w, h: h}
+
+
+    WhileDragging: (e) =&gt;
+        <span class="property">@w</span> = e.pageX - <span class="property">@x</span>
+        <span class="property">@h</span> = e.pageY - <span class="property">@y</span>
+
+        @.updateDiv()
+        r.updateIntersections(@) <span class="keyword">for</span> r <span class="keyword">in</span> <span class="property">@rects</span>
+
+    StopDragging: =&gt;
+        r.StopDragging() <span class="keyword">for</span> r <span class="keyword">in</span> <span class="property">@rects</span>
+
+        log <span class="string">'selectionrect drag stop'</span>
+        console.groupEnd()
+
+    String: -&gt;
+        <span class="string">"{x: <span class="subst">#{@x}</span>, y: <span class="subst">#{@y}</span>, w: <span class="subst">#{@w}</span>, h: <span class="subst">#{@h}</span>}"</span>
+
+window.<span class="function"><span class="title">doStuff</span></span> = -&gt;
+    [w, h] = [window.document.width, window.document.height]
+
+    Rects = <span class="keyword">new</span> window.RectGroups
+
+    s = <span class="keyword">new</span> Rectangle <span class="number">0</span>, <span class="number">0</span>, w, h
+
+    $b = $(<span class="string">'body'</span>)
+
+    log <span class="string">'dostuff'</span>, s.div.attr(<span class="string">'id'</span>, <span class="string">'fullmask'</span>)
+
+    $b.append s.div
+
+    Rects.Push s
+
+    $d = $(<span class="string">'body'</span>)
+
+    Sels = []
+
+    sel = <span class="literal">null</span>
+
+    sels = [
+        {x: <span class="number">369</span>, y: <span class="number">45</span>, w: <span class="number">204</span>, h: <span class="number">78</span>}
+        {x: <span class="number">812</span>, y: <span class="number">203</span>, w: -<span class="number">287</span>, h: -<span class="number">110</span>}
+        {x: <span class="number">342</span>, y: <span class="number">197</span>, w: <span class="number">419</span>, h: <span class="number">80</span>}
+    ]
+
+    <span class="keyword">for</span> j <span class="keyword">in</span>  sels
+        <span class="keyword">do</span> (j) -&gt;
+            s = <span class="keyword">new</span> SelectionRect j.x, j.y, j.w, j.h
+            Rects.ProcessColliding s
+            s.StopDragging()
+
+    $d.mousedown (e) -&gt;
+        Dragging = <span class="literal">true</span>
+
+        console.group <span class="string">'drag'</span>
+        log <span class="string">'start dragging %O'</span>, Rects.rects
+
+        sel = <span class="keyword">new</span> SelectionRect e.pageX, e.pageY, <span class="number">1</span>, <span class="number">1</span>
+        Rects.ProcessColliding sel
+        $d.mousemove sel.WhileDragging
+        $d.mouseup (e) -&gt;
+            log <span class="string">'stopping drag'</span>
+            sel.StopDragging()
+            Dragging = <span class="literal">false</span>
+            $d.<span class="literal">off</span> <span class="string">'mousemove mouseup'</span>
+
+            log (i.String() <span class="keyword">for</span> i <span class="keyword">in</span> Selections).join <span class="string">','</span></pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
