@@ -20,16 +20,10 @@ GetId = do ->
     -> id += 1
 
 # Global Collection of rectangles
-Rects = null
-
-$ ->
-    # initialize global collection, and the single main mask covering
-    # the whole screen.
-    Rects = new RectGroups
-    doStuff()
+Rects = []
 
 # Group of rectangles, which can be checked for collision.
-class RectGroups
+class window.RectGroups
     constructor: ->
         @rects = []
 
@@ -50,7 +44,7 @@ class RectGroups
                     log i.SplitWith s
 
 
-class Rect
+class window.Rectangle
     # Masking is true if the rectangle is actually masking the screen.
     constructor: (@x, @y, @w, @h, @Masking=true) ->
         return null if @w == 0 or @h == 0
@@ -76,7 +70,7 @@ class Rect
 
     # Check if the Rectangle is colliding with normalized boundry of `s`
     IsColliding: (s) ->
-        {x: x, y: y, w: w, h: h} = s.normalizedBoundary()
+        {x: x, y: y, w: w, h: h} = s.NormalizedBoundary()
 
         not (
             @x + @w <= x  or
@@ -85,8 +79,10 @@ class Rect
             @y >= y + h
         )
 
+    # Return the details of rectangle which is the intersection of
+    # Selection rectangle and current rectangle object.
     intersectingRect: (s) =>
-        {x: x, y: y, w: w, h: h} = s.normalizedBoundary()
+        {x: x, y: y, w: w, h: h} = s.NormalizedBoundary()
         rbx = x + w
         rby = y + h
 
@@ -97,8 +93,10 @@ class Rect
 
         [x, y, w, h]
 
-    # f => first, m => middle, l => last, c => column, r => row, s =>
-    # start, w => width, h => height
+    # Returns the lines (rows and columns) of rectangles, formed by
+    # intersection. The naming convension is -
+    # f => first, m => middle, l => last, c => column,
+    # r => row, s => start, w => width, h => height
     intersectionPoints: (x, y, w, h) =>
         fcs: @x
         fcw: x - @x
@@ -114,6 +112,10 @@ class Rect
         lrs: y + h
         lrh: @y + @h - (y + h)
 
+    # Returns the rectangles, around the intersection. Generates
+    # rectangles for all positions except the intersection
+    # itself. Note that the rectangles could be of 0 size, if the
+    # intersection overlaps with sides of the rectangle
     rectSplits: (p) =>
         {
             # first column
@@ -123,7 +125,7 @@ class Rect
 
             # second column
             n: [p.mcs, p.frs, p.mcw, p.frh]
-            # [p.mcs, p.mrs, p.mcw, p.mrh]
+            #     [p.mcs, p.mrs, p.mcw, p.mrh]
             s: [p.mcs, p.lrs, p.mcw, p.lrh]
 
             # third column
@@ -132,6 +134,7 @@ class Rect
             se: [p.lcs, p.lrs, p.lcw, p.lrh]
         }
 
+    # called every time the size of selection rectangle changes.
     updateIntersections: (s) =>
         if not @IsColliding(s)
             @RemoveSplits()
@@ -143,7 +146,7 @@ class Rect
         # this probably needs the correct coordinates.
         # move the intersection logic to SelectionRect.
         # dont expose bare coordinates
-        ns = s.normalizedBoundary()
+        ns = s.NormalizedBoundary()
 
         if ns.x != x or ns.y != y or ns.w != w or ns.h != h
             Rects.ProcessColliding s
@@ -152,7 +155,7 @@ class Rect
 
         newRect = (xx, yy, ww, hh) ->
             return null if hh == 0 or ww == 0
-            new Rect xx, yy, ww, hh
+            new Rectangle xx, yy, ww, hh
 
         updateRect = (d, v) =>
             @splits[d] = newRect(v...) if not @splits[d]
@@ -165,7 +168,7 @@ class Rect
 
             @splits[d].updateDiv()
 
-        # log "- spilitting #{@id} to #{ (v?.id for _, v of @splits).join(',') }"
+        #     log "- spilitting #{@id} to #{ (v?.id for _, v of @splits).join(',') }"
 
         updateRect(d, v) for d, v of splits
 
@@ -185,7 +188,7 @@ class Rect
             return null if x == xx and y == yy and
                 w == ww and h == hh
             return null if hh == 0 or ww == 0
-            new Rect xx, yy, ww, hh
+            new Rectangle xx, yy, ww, hh
 
         @RemoveOrig()
         log 'splitting', @id, @, '  with ', s
@@ -213,7 +216,7 @@ class Rect
             v?.div.remove()
             v?.Masking = false
 
-    StopDragging: (e) =>
+    StopDragging: =>
         log 'stopping, and pushing all rects', @splits
         for d, n of @splits
             if n and n.w != 0 and n.h != 0
@@ -226,17 +229,20 @@ class Rect
 # change in square dimentions, changes the underlying div
 # what happens on drag
 
-class SelectionRect
+Selections = []
+
+class window.SelectionRect
     constructor: (@x, @y, @w, @h) ->
         @div = $('<div class="sel-rect">')
         @rects = []
         $('body').append @div
+        Selections.push @
         @id = GetId()
+        @.updateDiv()
         @
-        log 'id - ', @id
 
     updateDiv: =>
-        ns = @.normalizedBoundary()
+        ns = @.NormalizedBoundary()
         @div.css(
             top: ns.y+'px'
             left: ns.x + 'px'
@@ -247,7 +253,7 @@ class SelectionRect
     # If the width/height of `s` is negative, normalize it. `x` and
     # `y` would be the coordinates of point closer to origin. And `w`
     # and `h` would be +ve.
-    normalizedBoundary: =>
+    NormalizedBoundary: =>
         [x, y, w, h] = [@x, @y, @w, @h]
         [rbx, rby] = [x+w, y+h]
 
@@ -266,16 +272,21 @@ class SelectionRect
         @.updateDiv()
         r.updateIntersections(@) for r in @rects
 
-    StopDragging: (e) =>
-        r.StopDragging(e) for r in @rects
+    StopDragging: =>
+        r.StopDragging() for r in @rects
 
         log 'selectionrect drag stop'
         console.groupEnd()
 
-doStuff = ->
+    String: ->
+        "{x: #{@x}, y: #{@y}, w: #{@w}, h: #{@h}}"
+
+window.doStuff = ->
     [w, h] = [window.document.width, window.document.height]
 
-    s = new Rect 0, 0, w, h
+    Rects = new window.RectGroups
+
+    s = new Rectangle 0, 0, w, h
 
     $b = $('body')
 
@@ -291,6 +302,18 @@ doStuff = ->
 
     sel = null
 
+    sels = [
+        {x: 369, y: 45, w: 204, h: 78}
+        {x: 812, y: 203, w: -287, h: -110}
+        {x: 342, y: 197, w: 419, h: 80}
+    ]
+
+    for j in  sels
+        do (j) ->
+            s = new SelectionRect j.x, j.y, j.w, j.h
+            Rects.ProcessColliding s
+            s.StopDragging()
+
     $d.mousedown (e) ->
         Dragging = true
 
@@ -302,7 +325,8 @@ doStuff = ->
         $d.mousemove sel.WhileDragging
         $d.mouseup (e) ->
             log 'stopping drag'
-            sel.StopDragging(e)
+            sel.StopDragging()
             Dragging = false
-            $d.off 'mousemove'
-            $d.off 'mouseup'
+            $d.off 'mousemove mouseup'
+
+            log (i.String() for i in Selections).join ','
