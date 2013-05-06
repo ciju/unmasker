@@ -278,37 +278,30 @@ class window.SelectionRect
         log 'selectionrect drag stop'
         console.groupEnd()
 
-    String: ->
-        "{x: #{@x}, y: #{@y}, w: #{@w}, h: #{@h}}"
+    ToJSON: ->
+        "{\"x\": #{@x}, \"y\": #{@y}, \"w\": #{@w}, \"h\": #{@h}}"
 
 window.doStuff = ->
     [w, h] = [window.document.width, window.document.height]
+    $d = $('body')
 
     Rects = new window.RectGroups
 
     s = new Rectangle 0, 0, w, h
+    s.div.attr('id', 'fullmask')
 
-    $b = $('body')
-
-    log 'dostuff', s.div.attr('id', 'fullmask')
-
-    $b.append s.div
+    $d.append s.div
 
     Rects.Push s
 
-    $d = $('body')
-
-    Sels = []
-
     sel = null
 
-    sels = [
-        {x: 369, y: 45, w: 204, h: 78}
-        {x: 812, y: 203, w: -287, h: -110}
-        {x: 342, y: 197, w: 419, h: 80}
-    ]
+    sels = []
+    if $.localStorage 'rects'
+        sels = $.parseJSON '['+$.localStorage('rects')+']'
+    log sels
 
-    for j in  sels
+    for j in sels
         do (j) ->
             s = new SelectionRect j.x, j.y, j.w, j.h
             Rects.ProcessColliding s
@@ -329,4 +322,6 @@ window.doStuff = ->
             Dragging = false
             $d.off 'mousemove mouseup'
 
-            log (i.String() for i in Selections).join ','
+            rects_str = (i.ToJSON() for i in Selections).join ','
+            $.localStorage 'rects', rects_str
+            log 'saving', rects_str 

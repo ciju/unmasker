@@ -351,8 +351,8 @@
       return console.groupEnd();
     };
 
-    SelectionRect.prototype.String = function() {
-      return "{x: " + this.x + ", y: " + this.y + ", w: " + this.w + ", h: " + this.h + "}";
+    SelectionRect.prototype.ToJSON = function() {
+      return "{\"x\": " + this.x + ", \"y\": " + this.y + ", \"w\": " + this.w + ", \"h\": " + this.h + "}";
     };
 
     return SelectionRect;
@@ -360,36 +360,21 @@
   })();
 
   window.doStuff = function() {
-    var $b, $d, Sels, h, j, s, sel, sels, w, _fn, _i, _len, _ref;
+    var $d, h, j, s, sel, sels, w, _fn, _i, _len, _ref;
 
     _ref = [window.document.width, window.document.height], w = _ref[0], h = _ref[1];
+    $d = $('body');
     Rects = new window.RectGroups;
     s = new Rectangle(0, 0, w, h);
-    $b = $('body');
-    log('dostuff', s.div.attr('id', 'fullmask'));
-    $b.append(s.div);
+    s.div.attr('id', 'fullmask');
+    $d.append(s.div);
     Rects.Push(s);
-    $d = $('body');
-    Sels = [];
     sel = null;
-    sels = [
-      {
-        x: 369,
-        y: 45,
-        w: 204,
-        h: 78
-      }, {
-        x: 812,
-        y: 203,
-        w: -287,
-        h: -110
-      }, {
-        x: 342,
-        y: 197,
-        w: 419,
-        h: 80
-      }
-    ];
+    sels = [];
+    if ($.localStorage('rects')) {
+      sels = $.parseJSON('[' + $.localStorage('rects') + ']');
+    }
+    log(sels);
     _fn = function(j) {
       s = new SelectionRect(j.x, j.y, j.w, j.h);
       Rects.ProcessColliding(s);
@@ -407,22 +392,24 @@
       Rects.ProcessColliding(sel);
       $d.mousemove(sel.WhileDragging);
       return $d.mouseup(function(e) {
-        var i;
+        var i, rects_str;
 
         log('stopping drag');
         sel.StopDragging();
         Dragging = false;
         $d.off('mousemove mouseup');
-        return log(((function() {
+        rects_str = ((function() {
           var _j, _len1, _results;
 
           _results = [];
           for (_j = 0, _len1 = Selections.length; _j < _len1; _j++) {
             i = Selections[_j];
-            _results.push(i.String());
+            _results.push(i.ToJSON());
           }
           return _results;
-        })()).join(','));
+        })()).join(',');
+        $.localStorage('rects', rects_str);
+        return log('saving', rects_str);
       });
     });
   };
