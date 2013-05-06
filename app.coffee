@@ -257,10 +257,8 @@ class window.SelectionRect
         [x, y, w, h] = [@x, @y, @w, @h]
         [rbx, rby] = [x+w, y+h]
 
-        if rbx < x
-            [x, rbx, w] = [rbx, x, -w]
-        if  rby < y
-            [y, rby, h] = [rby, y, -h]
+        [x, rbx, w] = [rbx, x, -w] if rbx < x
+        [y, rby, h] = [rby, y, -h] if rby < y
 
         {x: x, y: y, w: w, h: h}
 
@@ -324,4 +322,4 @@ window.doStuff = ->
 
             rects_str = (i.ToJSON() for i in Selections).join ','
             $.localStorage 'rects', rects_str
-            log 'saving', rects_str 
+            log 'saving', rects_str
