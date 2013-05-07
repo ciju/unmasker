@@ -21,6 +21,18 @@ p {
    position: absolute;
    display: block;
    border: 1px solid green;
-   opacity: 0.5;
+   /* opacity: 0.5; */
+}
+
+.close {
+   background-color: gray;
+   opacity: 1;
+}
+.close a {
+   color: red;
+   text-decoration: none;
+   position: absolute;
+   right: 0;
+   top: 0;
 }
 

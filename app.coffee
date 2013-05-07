@@ -55,6 +55,7 @@ class window.Rectangle
         @div = $('<div class="mask">')
         @.updateDiv()
         $('body').append @div
+        @.setupEvents()
 
         @
 
@@ -67,6 +68,16 @@ class window.Rectangle
         )
         @div.attr 'data-id', @id
 
+    setupEvents: =>
+        @div.dblclick (e) =>
+            # send global event about dblclick on masked div.
+            # belongs to code common to all the rects. A global object.
+            console.warn 'to edit mode'
+            e.preventDefault()
+            e.stopPropagation()
+
+            $('.sel-rect').css 'display', 'block'
+            $('.mask').css 'opacity', 0.5
 
     # Check if the Rectangle is colliding with normalized boundry of `s`
     IsColliding: (s) ->
@@ -179,7 +190,7 @@ class window.Rectangle
             @.RemoveSplits()
             return
         if not @Masking
-            log 'div ', @, ' not visible'
+            console.warn 'div ', @, ' not visible'
             return
 
         [x, y, w, h] = @.intersectingRect s
@@ -239,6 +250,7 @@ class window.SelectionRect
         Selections.push @
         @id = GetId()
         @.updateDiv()
+        @.setupEvents()
         @
 
     updateDiv: =>
@@ -249,6 +261,34 @@ class window.SelectionRect
             width: ns.w + 'px'
             height: ns.h + 'px'
         )
+
+    setupEvents: ->
+        console.warn 'setting click'
+        @div.click (e) ->
+            if not Dragging
+                e.preventDefault()
+                e.stopPropagation()
+        @div.dblclick (e) =>
+            e.preventDefault()
+            e.stopPropagation()
+
+            $('.sel-rect').css 'display', 'none'
+            $('.mask').css 'opacity', 1
+
+        span = null
+        @div.hover ((e) =>
+            log 'hover'
+            span = $('<span class="close"><a href="javascript:;">X</a></span>')
+            @div.append span
+        ), ((e) =>
+            if span
+                span.remove()
+                span = null
+        )
+
+        @div.on 'click', '.close', (e) ->
+            console.warn 'close clicked'
+            e.stopPropagation()
 
     # If the width/height of `s` is negative, normalize it. `x` and
     # `y` would be the coordinates of point closer to origin. And `w`
@@ -274,10 +314,11 @@ class window.SelectionRect
         r.StopDragging() for r in @rects
 
         log 'selectionrect drag stop'
-        console.groupEnd()
 
     ToJSON: ->
         "{\"x\": #{@x}, \"y\": #{@y}, \"w\": #{@w}, \"h\": #{@h}}"
+
+
 
 window.doStuff = ->
     [w, h] = [window.document.width, window.document.height]
@@ -304,22 +345,29 @@ window.doStuff = ->
             s = new SelectionRect j.x, j.y, j.w, j.h
             Rects.ProcessColliding s
             s.StopDragging()
+            # $('.sel-rect').css 'display', 'none'
+            # $('.mask').css 'opacity', 1
+            
+
 
     $d.mousedown (e) ->
-        Dragging = true
-
         console.group 'drag'
-        log 'start dragging %O', Rects.rects
+        # log 'start dragging %O', Rects.rects
 
-        sel = new SelectionRect e.pageX, e.pageY, 1, 1
-        Rects.ProcessColliding sel
-        $d.mousemove sel.WhileDragging
+        $d.mousemove (e) ->
+            Dragging = true
+            if not sel
+                sel = new SelectionRect e.pageX, e.pageY, 1, 1
+                Rects.ProcessColliding sel
+            sel.WhileDragging e
         $d.mouseup (e) ->
             log 'stopping drag'
-            sel.StopDragging()
+            sel.StopDragging() if sel
+            sel = null
             Dragging = false
             $d.off 'mousemove mouseup'
 
             rects_str = (i.ToJSON() for i in Selections).join ','
             $.localStorage 'rects', rects_str
             log 'saving', rects_str
+            console.groupEnd()

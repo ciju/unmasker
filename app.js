@@ -74,6 +74,7 @@
       this.rectSplits = __bind(this.rectSplits, this);
       this.intersectionPoints = __bind(this.intersectionPoints, this);
       this.intersectingRect = __bind(this.intersectingRect, this);
+      this.setupEvents = __bind(this.setupEvents, this);
       this.updateDiv = __bind(this.updateDiv, this);
       if (this.w === 0 || this.h === 0) {
         return null;
@@ -83,6 +84,7 @@
       this.div = $('<div class="mask">');
       this.updateDiv();
       $('body').append(this.div);
+      this.setupEvents();
       this;
     }
 
@@ -94,6 +96,18 @@
         height: this.h + 'px'
       });
       return this.div.attr('data-id', this.id);
+    };
+
+    Rectangle.prototype.setupEvents = function() {
+      var _this = this;
+
+      return this.div.dblclick(function(e) {
+        console.warn('to edit mode');
+        e.preventDefault();
+        e.stopPropagation();
+        $('.sel-rect').css('display', 'block');
+        return $('.mask').css('opacity', 0.5);
+      });
     };
 
     Rectangle.prototype.IsColliding = function(s) {
@@ -196,7 +210,7 @@
         return;
       }
       if (!this.Masking) {
-        log('div ', this, ' not visible');
+        console.warn('div ', this, ' not visible');
         return;
       }
       _ref = this.intersectingRect(s), x = _ref[0], y = _ref[1], w = _ref[2], h = _ref[3];
@@ -290,6 +304,7 @@
       Selections.push(this);
       this.id = GetId();
       this.updateDiv();
+      this.setupEvents();
       this;
     }
 
@@ -302,6 +317,40 @@
         left: ns.x + 'px',
         width: ns.w + 'px',
         height: ns.h + 'px'
+      });
+    };
+
+    SelectionRect.prototype.setupEvents = function() {
+      var span,
+        _this = this;
+
+      console.warn('setting click');
+      this.div.click(function(e) {
+        if (!Dragging) {
+          e.preventDefault();
+          return e.stopPropagation();
+        }
+      });
+      this.div.dblclick(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $('.sel-rect').css('display', 'none');
+        return $('.mask').css('opacity', 1);
+      });
+      span = null;
+      this.div.hover((function(e) {
+        log('hover');
+        span = $('<span class="close"><a href="javascript:;">X</a></span>');
+        return _this.div.append(span);
+      }), (function(e) {
+        if (span) {
+          span.remove();
+          return span = null;
+        }
+      }));
+      return this.div.on('click', '.close', function(e) {
+        console.warn('close clicked');
+        return e.stopPropagation();
       });
     };
 
@@ -347,8 +396,7 @@
         r = _ref[_i];
         r.StopDragging();
       }
-      log('selectionrect drag stop');
-      return console.groupEnd();
+      return log('selectionrect drag stop');
     };
 
     SelectionRect.prototype.ToJSON = function() {
@@ -385,17 +433,23 @@
       _fn(j);
     }
     return $d.mousedown(function(e) {
-      Dragging = true;
       console.group('drag');
-      log('start dragging %O', Rects.rects);
-      sel = new SelectionRect(e.pageX, e.pageY, 1, 1);
-      Rects.ProcessColliding(sel);
-      $d.mousemove(sel.WhileDragging);
+      $d.mousemove(function(e) {
+        Dragging = true;
+        if (!sel) {
+          sel = new SelectionRect(e.pageX, e.pageY, 1, 1);
+          Rects.ProcessColliding(sel);
+        }
+        return sel.WhileDragging(e);
+      });
       return $d.mouseup(function(e) {
         var i, rects_str;
 
         log('stopping drag');
-        sel.StopDragging();
+        if (sel) {
+          sel.StopDragging();
+        }
+        sel = null;
         Dragging = false;
         $d.off('mousemove mouseup');
         rects_str = ((function() {
@@ -409,7 +463,8 @@
           return _results;
         })()).join(',');
         $.localStorage('rects', rects_str);
-        return log('saving', rects_str);
+        log('saving', rects_str);
+        return console.groupEnd();
       });
     });
   };
