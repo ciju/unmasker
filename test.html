@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset="utf-8">    
+<meta content='Ruby Rails Web Development Bangalore India' name='title'>
+<meta content='index, follow' name='robots'>
+<meta content='initial-scale=1.0,width=device-width' name='viewport'>
+<link href='http://fonts.googleapis.com/css?family=Oswald|Droid+Sans|La+Belle+Aurore|Gabriela|Cutive+Mono|Open+Sans' rel='stylesheet' type='text/css'>
+<link href='http://blog.activesphere.com/assets/master.css' media='screen' rel='stylesheet' type='text/css'>
+<link href='http://blog.activesphere.com/assets/common.css' media='screen' rel='stylesheet' type='text/css'>
+
+
+<meta name="description" content="Gotunnel allows you to share server running on localhost, over the net. Supports http, https and websocket.">
+
+
+<title>Gotunnel: make localhost server accessible over internet :: ActiveSphere - India based Ruby Rails JavaScript consulting</title>
+
+
+<meta name="keywords" content="Golang,localtunnel,tech"/>
+
+    <link href="./app.css" rel="stylesheet">
+    <script src="./jquery-1.9.1.min.js" type="text/javascript"></script>
+    <script src="./jquery.storage.js" type="text/javascript"></script>
+    <script src="./app.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      $(doStuff); // start the app
+    </script>
+
+
+  </head>
+  <body>
+    <div class='header'>
+  <div class='content'>
+    <span class='contact_details'>
+      <span class='phone'>
+        Phone:
+        <span class='value'>
+          <a href='tel:+91 9663681428'>
+            +91 9663681428
+          </a>
+        </span>
+      </span>
+      <span class='email'>
+        Email:
+        <span class='value'>
+          <a href='mailto:contact@activesphere.com'>
+            contact@activesphere.com
+          </a>
+        </span>
+      </span>
+    </span>
+    <div class='logo'>
+      <a href='/'>
+        <span class='first_half'>Active</span>
+        <span class='second_half'>Sphere</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+    <div class="nav">
+  <span class="navlinks">
+    <a href="http://activesphere.com/">home</a>
+  </span>
+  <span class="navlinks">
+    <a href="http://activesphere.com/our_hacks">hacks</a>
+  </span>
+  <span class="navlinks">
+    <a href="http://activesphere.com/contact">contact</a>
+  </span>
+  <span class="navlinks">
+    <a href="http://activesphere.com/about_us">about</a>
+  </span>
+  <span class="navlinks">
+    <a href="http://activesphere.com/careers">careers</a>
+  </span>
+  <span class="navlinks">
+    <a href="/">blog</a>
+  </span>
+</div>
+
+    <div class='page homepage2'>
+      <div class="post">
+        <div class="meta">
+          <h2>
+            <a href="/blog/2013/03/26/gotunnel-make-localhost-server-accessible-over-internet"> Gotunnel: make localhost server accessible over internet </a>
+          </h2>
+          
+          <h3>
+            <i>by ciju</i>
+          </h3>
+          
+        </div>
+
+        <div>
+          <div class="post-content">
+            <p>Check the <a href='http://github.com/ciju/gotunnel'>Github repo</a> for installation and usage instructions.</p>
+
+<h2 id='the_problem'>The problem</h2>
+
+<p>On the internet, to access a server, you need its IP address and port. Your local machine might be running behind a <a href='http://en.wikipedia.org/wiki/Network_address_translation'>NAT</a>. So, a server running on your local machine, might not be addressable from internet (ex: no publically visible IP). This is where localtunnel comes in. It makes the local server accessible over an IP (and port), on the internet.</p>
+
+<p>Core idea of the solution is that a client from localhost could keep a connection with a server on the internet.</p>
+
+<p>This connection could be used by server to forward requests. Gotunnel utilizes this by running a client on localhost. This Gotunnel Client connects to the Gotunnel Server accessible on the net. It also connects to the App server. Gotunnel Clients role is to receive requests from Gotunnel Server, and forward them to App Server.</p>
+
+<p>Lets start with a (slightly incomplete) picture of the whole architecture. (Except for small changes, picture is copied from <a href='https://github.com/progrium/localtunnel/blob/master/PROTOCOL.md'>Localtunnel protocol doc</a>). Keep this picture in mind, while we delve into more details.</p>
+
+<pre><code>         +--------------------+
+         | Gotunnel Server    |
+         |--------------------|         +---------+
+         | Backend | Frontend |&lt;--------+ Browser |
+         +---------+----------+         +---------+
+            ^  ^^
+            |  ||
+            |  ||
+     Control|  ||Proxy
+  Connection|  ||Connections
+            |  || 
+     +------|  ||-----------------------------------+
+     |   +--+--++----------+         +------------+ |
+     |   | Gotunnel Client +--------&gt;| App Server | |
+     |   +-----------------+         +------------+ |
+     |                                              |
+     |                  localhost                   |
+     +----------------------------------------------+</code></pre>
+
+<p>What we want is for the App Server to be accessible from (lets say) a browser. Since it can&#8217;t be accessed from outside the localhost, we have a client in localhost, which is connected with the Gotunnel server, and can connect to the App Server whenever needed.</p>
+
+<p>Lets examine the case where only a single App Server needs to be made accessible on the net. The client could (at startup) connect the Gotunnel Server, and setup a Control Connection. Gotunnel Server, on receiving a request from Browser, would let Gotunnel Client know about it, via the Control Connection. Gotunnel Client would respond by creating a new connection with Gotunnel Server, which will we used as a Proxy Connection. Gotunnel Server would then tunnel the request via the Proxy Connection. All this is happening at the TCP level (and hence supporting HTTP/S &amp; WebSocket).</p>
+
+<p>To support multiple clients, Gotunnel would have to differentiate between requests for different App Servers, and keep account of Control Connections associated with respective Clients. Like <a href='http://progrium.com/localtunnel/'>Localtunnel</a>, Gotunnel Server associates Clients (and in turn App Servers) with subdomains of the Server.</p>
+
+<p>To look at it from another perspective, lets consider the lifecycle of Gotunnel Server and Client. Lets first look at Gotunnel Client. When a client connects to Gotunnel Server, server sends back a subdomain. This is useless to client itself, except to show it on console, for you to share it with others. Any request to that subdomain, server will route to the particular client. And client in turn, to the App server. Response goes back via the same connections.</p>
+
+<p>Gotunnel Server is basically listening for two kinds of connections. Its listening for subdomain requests, to route to the particular client, associated with the subdomain. And its listening for connections from new clients, and when a new client connects it assigns the requested (or newly generated) subdomain to the particular client.</p>
+
+<p>All the connection routing etc is done at TCP level. What this means is that the connection, in most parts, doesn&#8217;t have to worry about the application layer protocol. Example, there is no separate code to support WebSocket. The only part where we have to deal with the application layer level protocol intricacies, is to get the <a href='http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol#Client_request'>Host</a>. We need the host to get the subdomain, for the request. In case of HTTP and WebSocket<sup id='fnref:1'><a href='#fn:1' rel='footnote'>1</a></sup>, we do this by parsing first few hundred bytes of the request, to get the headers. HTTPS is more difficult. In case of HTTPS headers themselves are (or might be?) encrypted. But in our trials, the host string was still sent in ascii. So, if we can&#8217;t parse headers, we just fall back to a regular expression match. Since the domain of the request is known, we can be somewhat specific in the regular expression. In other words, if you dont need subdomain parsing, (ex: a server which to which only one client can be connected), then there is no need for parsing. And he solution can be simpler.</p>
+
+<p>Routing at TCP level has atleast one problem. It might not be possible to do connection pooling. Ex: We don&#8217;t know when a request or response ends (unless we deal with the application layer protocol). So, the only way to know the end of connection, is if the TCP connection is closed. In other words, we won&#8217;t be able use the same TCP connection to tunnel multiple TCP connections.</p>
+<div class='footnotes'><hr /><ol><li id='fn:1'>
+<p>WebSocket starts as a HTTP connection. So, the process of getting HOST is same for both.</p>
+<a href='#fnref:1' rev='footnote'>&#8617;</a></li></ol></div>
+          </div>
+
+          <section class="categories">
+            
+            <h3>Categories</h3>
+            <ul><li><a class='category' href='/blog/category/golang/'>Golang</a></li><li><a class='category' href='/blog/category/localtunnel/'>localtunnel</a></li><li><a class='category' href='/blog/category/tech/'>tech</a></li></ul>
+            
+          </section>
+        </div>
+        <div class="clear"></div>
+      </div>
+
+      <section class="page-nav">
+        
+        <a href="/blog/2013/04/25/salary-reviews-need-not-be-blackmagic">&lArr;  Salary Reviews need not be black magic </a>
+        
+        &nbsp; | &nbsp;
+        
+        <a href="/blog/2012/02/07/scaling-and-large-numbers">Scaling and Large numbers &rArr;</a>
+        
+      </section>
+    </div>
+    <div class='footer'>
+  <div class='company'>&copy; 2012 ACTIVESPHERE</div>
+</div>
+
+    <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  var pluginUrl = '//www.google-analytics.com/plugins/ga/inpage_linkid.js';
+  _gaq.push(['_require', 'inpage_linkid', pluginUrl]);  
+  _gaq.push(['_setAccount', 'UA-10221263-5']);
+  _gaq.push(['_setDomainName', 'activesphere.com']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>    
+
+  </body>
+</html>
