@@ -8,9 +8,6 @@
     var args;
 
     args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-    if ((typeof console !== "undefined" && console !== null ? console.log : void 0) != null) {
-      return console.log.apply(console, args);
-    }
   };
 
   Dragging = false;
