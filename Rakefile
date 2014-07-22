@@ -7,7 +7,7 @@ end
 
 desc "Deploy docs to github"
 task :docco do
-  `cp app.js app.css index.html ./docs/`
+  `cp app.js app.css index.html test.html ./docs/`
   `cp -r ./libs ./docs/ `
   `docco app.coffee`
   `cd docs && git add -A && git commit -am 'updating docs' && git push -f origin gh-pages`

@@ -9,7 +9,7 @@
 # TODO: API?
 
 log = (args...) ->
-    console.log(args...) if console?.log?
+    # console.log(args...) if console?.log?
 
 # Global variable which is set to true, if mouse is being dragged.
 Dragging = false
@@ -19,8 +19,8 @@ GetId = do ->
     id = 0
     -> id += 1
 
-# Global Collection of rectangles
-Rects = []
+# Global Collection of rectangles - instance of RectGroups
+Rects = null
 
 # Group of rectangles, which can be checked for collision.
 class window.RectGroups
@@ -43,6 +43,12 @@ class window.RectGroups
                     log 'is colliding', s?.id, s
                     log i.SplitWith s
 
+    Delete: (s) ->
+        for i in @rects
+            if not s
+                i.Delete()
+            else if i.id == s.id
+                s.Delete()
 
 class window.Rectangle
     # Masking is true if the rectangle is actually masking the screen.
@@ -60,6 +66,7 @@ class window.Rectangle
         @
 
     updateDiv: =>
+        log "Setting with - #{@x} - #{@y} - #{@w} - #{@h} : id #{@id}"
         @div.css(
             top: @y + 'px'
             left: @x + 'px'
@@ -190,7 +197,7 @@ class window.Rectangle
             @.RemoveSplits()
             return
         if not @Masking
-            console.warn 'div ', @, ' not visible'
+            console.error 'div ', @, ' not visible'
             return
 
         [x, y, w, h] = @.intersectingRect s
@@ -223,9 +230,20 @@ class window.Rectangle
         @div.show()
         @Masking = true
         for d, v of @splits
-            v?.RemoveOrig()
-            v?.div.remove()
-            v?.Masking = false
+            continue unless v
+            v.RemoveOrig()
+            v.div.remove()
+            v.Masking = false
+
+    Delete: =>
+        log "deleting #{@id}"
+        @div.remove()
+        for d, v of @splits
+            continue unless v
+            v.RemoveOrig()
+            v.div.remove()
+
+
 
     StopDragging: =>
         log 'stopping, and pushing all rects', @splits
@@ -262,7 +280,7 @@ class window.SelectionRect
             height: ns.h + 'px'
         )
 
-    setupEvents: ->
+    setupEvents: =>
         console.warn 'setting click'
         @div.click (e) ->
             if not Dragging
@@ -286,9 +304,26 @@ class window.SelectionRect
                 span = null
         )
 
-        @div.on 'click', '.close', (e) ->
+        @div.on 'click', '.close', (e) =>
             console.warn 'close clicked'
+            @.Remove()
             e.stopPropagation()
+
+    teardownEvents: ->
+        @div.off 'click dblclick hover'
+
+    Remove: ->
+        @.teardownEvents()
+        @div.remove()
+        log 'selections ', Selections
+        for s, i in Selections
+            continue if not s
+            log 'id ', @id, ' s.id', s.id
+            continue if s.id != @id
+            log 'remove the entry'
+            Selections[i] = null
+            $.publish 'selector.removed'
+
 
     # If the width/height of `s` is negative, normalize it. `x` and
     # `y` would be the coordinates of point closer to origin. And `w`
@@ -320,8 +355,19 @@ class window.SelectionRect
 
 
 
-window.doStuff = ->
-    [w, h] = [window.document.width, window.document.height]
+renderSelectionRects = (sels) ->
+    log 'selections ', sels
+    for j in sels
+        do (j) ->
+            s = new SelectionRect j.x, j.y, j.w, j.h
+            Rects.ProcessColliding s
+            s.StopDragging()
+            #     $('.sel-rect').css 'display', 'none'
+            #     $('.mask').css 'opacity', 1
+
+
+initMainMask = ->
+    [w, h] = [$(window.document).width(), $(window.document).height()]
     $d = $('body')
 
     Rects = new window.RectGroups
@@ -333,26 +379,37 @@ window.doStuff = ->
 
     Rects.Push s
 
+
+window.doStuff = ->
+
+    initMainMask()
+    $d = $('body')
+
     sel = null
 
     sels = []
     if $.localStorage 'rects'
         sels = $.parseJSON '['+$.localStorage('rects')+']'
-    log sels
 
-    for j in sels
-        do (j) ->
-            s = new SelectionRect j.x, j.y, j.w, j.h
-            Rects.ProcessColliding s
-            s.StopDragging()
-            # $('.sel-rect').css 'display', 'none'
-            # $('.mask').css 'opacity', 1
-            
+    renderSelectionRects sels
+
+    $.subscribe 'selector.removed', ->
+        rects_str = (i.ToJSON() for i in Selections when i?).join ','
+        log 'saving the new rects', rects_str
+        $.localStorage 'rects', rects_str
+
+        $('.mask').remove()
+        $('.sel-rect').remove()
+        Rects = null
+        Selections = []
+        initMainMask()
+
+        renderSelectionRects $.parseJSON '['+$.localStorage('rects')+']'
 
 
     $d.mousedown (e) ->
         console.group 'drag'
-        # log 'start dragging %O', Rects.rects
+        #     log 'start dragging %O', Rects.rects
 
         $d.mousemove (e) ->
             Dragging = true
@@ -367,7 +424,7 @@ window.doStuff = ->
             Dragging = false
             $d.off 'mousemove mouseup'
 
-            rects_str = (i.ToJSON() for i in Selections).join ','
+            rects_str = (i.ToJSON() for i in Selections when i?).join ','
             $.localStorage 'rects', rects_str
             log 'saving', rects_str
             console.groupEnd()
