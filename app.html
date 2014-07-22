@@ -180,6 +180,7 @@ the rectangle <code>s</code> passed as parameter.</p>
         @
 
     updateDiv: =&gt;
+        log <span class="string">"Setting with - <span class="subst">#{@x}</span> - <span class="subst">#{@y}</span> - <span class="subst">#{@w}</span> - <span class="subst">#{@h}</span> : id <span class="subst">#{@id}</span>"</span>
         <span class="property">@div</span>.css(
             top: <span class="property">@y</span> + <span class="string">'px'</span>
             left: <span class="property">@x</span> + <span class="string">'px'</span>
@@ -455,7 +456,7 @@ dont expose bare coordinates</p>
             @.RemoveSplits()
             <span class="keyword">return</span>
         <span class="keyword">if</span> <span class="keyword">not</span> <span class="property">@Masking</span>
-            console.warn <span class="string">'div '</span>, @, <span class="string">' not visible'</span>
+            console.error <span class="string">'div '</span>, @, <span class="string">' not visible'</span>
             <span class="keyword">return</span>
 
         [x, y, w, h] = @.intersectingRect s
@@ -501,7 +502,7 @@ dont expose bare coordinates</p>
             v.RemoveOrig()
             v.div.remove()
 
-        
+
 
     StopDragging: =&gt;
         log <span class="string">'stopping, and pushing all rects'</span>, <span class="property">@splits</span>
@@ -651,15 +652,13 @@ and <code>h</code> would be +ve.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
-              <p>$(&#39;.sel-rect&#39;).css &#39;display&#39;, &#39;none&#39;
-$(&#39;.mask&#39;).css &#39;opacity&#39;, 1</p>
+              <pre><code>$(&#39;.sel-rect&#39;).css &#39;display&#39;, &#39;none&#39;
+$(&#39;.mask&#39;).css &#39;opacity&#39;, 1</code></pre>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>            
-
-<span class="function"><span class="title">initMainMask</span></span> = -&gt;
-    [w, h] = [window.document.width, window.document.height]
+            <div class="content"><div class='highlight'><pre><span class="function"><span class="title">initMainMask</span></span> = -&gt;
+    [w, h] = [$(window.document).width(), $(window.document).height()]
     $d = $(<span class="string">'body'</span>)
 
     Rects = <span class="keyword">new</span> window.RectGroups
@@ -670,7 +669,7 @@ $(&#39;.mask&#39;).css &#39;opacity&#39;, 1</p>
     $d.append s.div
 
     Rects.Push s
-        
+
 
 window.<span class="function"><span class="title">doStuff</span></span> = -&gt;
 
@@ -697,7 +696,7 @@ window.<span class="function"><span class="title">doStuff</span></span> = -&gt;
         initMainMask()
 
         renderSelectionRects $.parseJSON <span class="string">'['</span>+$.localStorage(<span class="string">'rects'</span>)+<span class="string">']'</span>
-        
+
 
     $d.mousedown (e) -&gt;
         console.group <span class="string">'drag'</span></pre></div></div>
@@ -711,7 +710,7 @@ window.<span class="function"><span class="title">doStuff</span></span> = -&gt;
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
-              <p>log &#39;start dragging %O&#39;, Rects.rects</p>
+              <pre><code>log &#39;start dragging %O&#39;, Rects.rects</code></pre>
 
             </div>
             

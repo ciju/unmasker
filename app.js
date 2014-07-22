@@ -105,6 +105,7 @@
     }
 
     Rectangle.prototype.updateDiv = function() {
+      log("Setting with - " + this.x + " - " + this.y + " - " + this.w + " - " + this.h + " : id " + this.id);
       this.div.css({
         top: this.y + 'px',
         left: this.x + 'px',
@@ -226,7 +227,7 @@
         return;
       }
       if (!this.Masking) {
-        console.warn('div ', this, ' not visible');
+        console.error('div ', this, ' not visible');
         return;
       }
       _ref = this.intersectingRect(s), x = _ref[0], y = _ref[1], w = _ref[2], h = _ref[3];
@@ -490,7 +491,7 @@
   initMainMask = function() {
     var $d, h, s, w, _ref;
 
-    _ref = [window.document.width, window.document.height], w = _ref[0], h = _ref[1];
+    _ref = [$(window.document).width(), $(window.document).height()], w = _ref[0], h = _ref[1];
     $d = $('body');
     Rects = new window.RectGroups;
     s = new Rectangle(0, 0, w, h);
